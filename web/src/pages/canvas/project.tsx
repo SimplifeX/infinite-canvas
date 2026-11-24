@@ -360,6 +360,7 @@ function InfiniteCanvasPage() {
                                   generateAudio: generationConfig.videoGenerateAudio,
                                   watermark: generationConfig.videoWatermark,
                                   videoMode: generationConfig.videoMode,
+                                  videoPreset: generationConfig.videoPreset,
                               })
                             : item,
                     ),

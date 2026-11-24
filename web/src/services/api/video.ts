@@ -47,14 +47,33 @@ export async function requestVideoGeneration(config: AiConfig, prompt: string, r
     return waitForVideoGenerationTask(config, await createVideoGenerationTask(config, prompt, references, options), options);
 }
 
+const VIDEO_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+const VIDEO_POLL_INTERVAL_MS = 3000;
+const VIDEO_POLL_MAX_TRANSIENT_ERRORS = 8;
+
 export async function waitForVideoGenerationTask(config: AiConfig, task: VideoGenerationTask, options?: RequestOptions): Promise<VideoGenerationResult> {
-    for (let attempt = 0; attempt < 120; attempt += 1) {
+    const deadline = Date.now() + VIDEO_POLL_TIMEOUT_MS;
+    let consecutiveErrors = 0;
+    while (Date.now() < deadline) {
         if (options?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
-        const state = await pollVideoGenerationTask(config, task, options);
-        if (state.status === "completed") return state.result;
-        if (state.status === "failed") throw videoTaskFailed(state.error);
-        if (attempt === 119) throw new Error(apiText("videoTimeout", { provider: "" }));
-        await delay(2500, options?.signal);
+        try {
+            const state = await pollVideoGenerationTask(config, task, options);
+            consecutiveErrors = 0;
+            if (state.status === "completed") return state.result;
+            if (state.status === "failed") throw videoTaskFailed(state.error);
+        } catch (error) {
+            if (isVideoTaskFailed(error) || options?.signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+                throw error;
+            }
+            consecutiveErrors += 1;
+            if (consecutiveErrors >= VIDEO_POLL_MAX_TRANSIENT_ERRORS || Date.now() + VIDEO_POLL_INTERVAL_MS >= deadline) {
+                throw error;
+            }
+        }
+        if (Date.now() + VIDEO_POLL_INTERVAL_MS >= deadline) {
+            throw new Error(apiText("videoTimeout", { provider: "" }));
+        }
+        await delay(VIDEO_POLL_INTERVAL_MS, options?.signal);
     }
     throw new Error(apiText("videoTimeout", { provider: "" }));
 }
