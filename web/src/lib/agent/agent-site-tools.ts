@@ -4,7 +4,7 @@ import i18n from "@/i18n";
 import { fetchPrompts } from "@/services/api/prompts";
 import { uploadImage } from "@/services/image-storage";
 import { imageAspectOptions, imageQualityOptions, imageScaleOptions } from "@/components/image-settings-panel";
-import { videoResolutionOptions, videoSecondsRange, videoSizeOptions } from "@/components/video-settings-panel";
+import { videoPresetOptions, videoResolutionOptions, videoSecondsRange, videoSizeOptions } from "@/components/video-settings-panel";
 import type { CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
 import { clampVideoSeconds } from "@/lib/media-size";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
@@ -200,11 +200,13 @@ function getVideoConfig() {
             generateAudio: config.videoGenerateAudio !== "false",
             watermark: config.videoWatermark === "true",
             mode: config.videoMode === "reference" ? "reference" : "frames",
+            preset: config.videoPreset === "action" || config.videoPreset === "final" ? config.videoPreset : "default",
         },
         models: selectableModelsByCapability(config, "video").map((value) => ({ value, label: modelOptionLabel(config, value) })),
         sizeOptions: videoSizeOptions,
         secondsRange: videoSecondsRange,
         resolutionOptions: videoResolutionOptions,
+        presetOptions: videoPresetOptions,
         modeOptions: [
             { value: "frames", label: i18n.t("settingsPanels.video.modes.frames") },
             { value: "reference", label: i18n.t("settingsPanels.video.modes.reference") },
@@ -244,6 +246,10 @@ function runVideoWorkbench(input: SiteToolInput, navigate: NavigateFunction) {
     if (input.mode === "frames" || input.mode === "reference") {
         configStore.updateConfig("videoMode", input.mode);
         applied.mode = input.mode;
+    }
+    if (input.preset === "default" || input.preset === "action" || input.preset === "final") {
+        configStore.updateConfig("videoPreset", input.preset);
+        applied.preset = input.preset;
     }
     const prompt = typeof input.prompt === "string" ? input.prompt : undefined;
     const run = input.run !== false;

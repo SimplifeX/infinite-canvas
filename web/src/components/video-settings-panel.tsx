@@ -17,14 +17,20 @@ const videoModeOptions = [
     { value: "frames", labelKey: "frames" },
     { value: "reference", labelKey: "reference" },
 ];
+const videoPresetList = [
+    { value: "default", labelKey: "default" },
+    { value: "action", labelKey: "action" },
+    { value: "final", labelKey: "final" },
+] as const;
 
 export const videoResolutionOptions = resolutionOptions.map((item) => ({ value: item.value, label: item.label }));
 export const videoSizeOptions = videoRatioOptions.map((item) => ({ value: item.value, get label() { return item.value === "auto" ? i18n.t("settingsPanels.common.auto") : item.value; } }));
+export const videoPresetOptions = videoPresetList.map((item) => ({ value: item.value, get label() { return i18n.t(`settingsPanels.video.presets.${item.labelKey}`); } }));
 export const videoSecondsRange = { min: VIDEO_SECONDS_MIN, max: VIDEO_SECONDS_MAX };
 
 type VideoSettingsPanelProps = {
     config: AiConfig;
-    onConfigChange: (key: "vquality" | "size" | "videoSeconds" | "videoGenerateAudio" | "videoWatermark" | "videoMode", value: string) => void;
+    onConfigChange: (key: "vquality" | "size" | "videoSeconds" | "videoGenerateAudio" | "videoWatermark" | "videoMode" | "videoPreset", value: string) => void;
     theme: CanvasTheme;
     showTitle?: boolean;
     className?: string;
@@ -34,6 +40,7 @@ export function VideoSettingsPanel({ config, onConfigChange, theme, showTitle = 
     const { t } = useTranslation();
     const seconds = Number(clampVideoSeconds(config.videoSeconds || "6"));
     const videoMode = normalizeVideoModeValue(config.videoMode);
+    const videoPreset = normalizeVideoPresetValue(config.videoPreset);
     const resolution = parseVideoResolution(config.vquality);
     const selectedRatio = inferVideoRatio(config.size || "auto");
     const dimensions = readVideoDimensions(config.size || "auto", resolution, selectedRatio);
@@ -100,6 +107,15 @@ export function VideoSettingsPanel({ config, onConfigChange, theme, showTitle = 
                         ))}
                     </div>
                 </SettingGroup>
+                <SettingGroup title={t("settingsPanels.video.preset")} color={theme.node.muted}>
+                    <div className="grid grid-cols-3 gap-2.5">
+                        {videoPresetList.map((item) => (
+                            <OptionPill key={item.value} selected={videoPreset === item.value} theme={theme} onClick={() => onConfigChange("videoPreset", item.value)}>
+                                {t(`settingsPanels.video.presets.${item.labelKey}`)}
+                            </OptionPill>
+                        ))}
+                    </div>
+                </SettingGroup>
             </div>
         </ImageSettingsTheme>
     );
@@ -125,6 +141,14 @@ export function videoModeLabel(value: string) {
 
 export function normalizeVideoModeValue(value: string | undefined) {
     return value === "reference" ? "reference" : "frames";
+}
+
+export function normalizeVideoPresetValue(value: string | undefined) {
+    return value === "action" || value === "final" ? value : "default";
+}
+
+export function videoPresetLabel(value: string | undefined) {
+    return i18n.t(`settingsPanels.video.presets.${normalizeVideoPresetValue(value)}`);
 }
 
 export function normalizeVideoSizeValue(value: string, resolution = "720") {

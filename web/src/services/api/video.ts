@@ -164,6 +164,9 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
     body.append("generate_audio", String(boolConfig(config.videoGenerateAudio, true)));
     body.append("watermark", String(boolConfig(config.videoWatermark, false)));
     body.append("mode", mode);
+    if (config.videoPreset === "default" || config.videoPreset === "action" || config.videoPreset === "final") {
+        body.append("preset", config.videoPreset);
+    }
     if (mode === "frames") {
         if (images[0]) {
             body.append("first_frame", images[0], "first.png");
