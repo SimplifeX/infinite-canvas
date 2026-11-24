@@ -3,6 +3,7 @@ import { BookOpen, Bot, Download, Home, Images, Menu, PanelLeftClose, PanelLeftO
 import { Button, Dropdown, Modal, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
+import { CanvasQueuePopover } from "@/components/canvas/canvas-queue-popover";
 import { UserStatusActions } from "@/components/layout/user-status-actions";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { useCanvasSidePanelStore } from "@/stores/use-canvas-side-panel-store";
@@ -139,6 +140,7 @@ export function CanvasTopBar({
                 </div>
 
                 <div className="pointer-events-auto flex items-center gap-1.5">
+                    <CanvasQueuePopover />
                     <UserStatusActions variant="canvas" onOpenShortcuts={() => setShortcutsOpen(true)} onOpenPlugins={onOpenPlugins} />
                     <span className="h-6 w-px" style={{ background: theme.toolbar.border }} />
                     <Button
