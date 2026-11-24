@@ -131,7 +131,7 @@ async function createPluginVideoTask(config: AiConfig, model: string, script: st
                 ratio: videoAspectRatio(config.size),
                 generateAudio: boolConfig(config.videoGenerateAudio, true),
                 watermark: boolConfig(config.videoWatermark, false),
-                mode: resolveVideoMode(config.videoMode, refs.length),
+                mode: resolveVideoMode(config.videoMode, refs.length, videos.length > 0 || audios.length > 0),
                 preset: config.videoPreset || "default",
             },
             signal: options?.signal,
@@ -170,7 +170,7 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
     const images = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
-    const mode = resolveVideoMode(config.videoMode, images.length);
+    const mode = resolveVideoMode(config.videoMode, images.length, videos.length > 0 || audios.length > 0);
     const ratio = inferVideoRatio(config.size || "16:9");
     const body = new FormData();
     body.append("model", modelOptionName(model));
@@ -245,7 +245,7 @@ async function createGeminiVideoTask(config: AiConfig, model: string, prompt: st
     const images = await Promise.all(references.map((image) => imageToDataUrl(image)));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
-    const mode = resolveVideoMode(config.videoMode, images.length);
+    const mode = resolveVideoMode(config.videoMode, images.length, videos.length > 0 || audios.length > 0);
     const instance: Record<string, unknown> = { prompt };
     if (mode === "frames") {
         if (images[0]) instance.image = parseDataUrlInline(images[0]);
@@ -345,8 +345,8 @@ function normalizeVideoSeconds(value: string) {
     return clampVideoSeconds(value);
 }
 
-function resolveVideoMode(mode: string | undefined, imageCount: number) {
-    if (mode === "reference" || imageCount > 2) return "reference";
+function resolveVideoMode(mode: string | undefined, imageCount: number, hasMediaRef = false) {
+    if (mode === "reference" || imageCount > 2 || hasMediaRef) return "reference";
     return "frames";
 }
 
