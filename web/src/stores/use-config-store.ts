@@ -39,6 +39,12 @@ export type AiConfig = {
     audioFormat: string;
     audioSpeed: string;
     audioInstructions: string;
+    audioProvider: string;
+    audioTtsMode: string;
+    audioLanguage: string;
+    audioRefId: string;
+    audioRefName: string;
+    audioRefText: string;
     videoSeconds: string;
     vquality: string;
     videoGenerateAudio: string;
@@ -105,10 +111,16 @@ export const defaultConfig: AiConfig = {
     videoModel: "default::grok-imagine-video",
     textModel: "default::gpt-5.5",
     audioModel: "default::gpt-4o-mini-tts",
-    audioVoice: "alloy",
+    audioVoice: "Vivian",
     audioFormat: "mp3",
     audioSpeed: "1",
     audioInstructions: "",
+    audioProvider: "qwen3tts",
+    audioTtsMode: "custom",
+    audioLanguage: "auto",
+    audioRefId: "",
+    audioRefName: "",
+    audioRefText: "",
     videoSeconds: "6",
     vquality: "720",
     videoGenerateAudio: "true",
@@ -275,6 +287,12 @@ export const useConfigStore = create<ConfigStore>()(
                         audioFormat: config.audioFormat || defaultConfig.audioFormat,
                         audioSpeed: config.audioSpeed || defaultConfig.audioSpeed,
                         audioInstructions: config.audioInstructions || "",
+                        audioProvider: config.audioProvider || defaultConfig.audioProvider,
+                        audioTtsMode: config.audioTtsMode === "design" || config.audioTtsMode === "base" ? config.audioTtsMode : "custom",
+                        audioLanguage: config.audioLanguage || "auto",
+                        audioRefId: config.audioRefId || "",
+                        audioRefName: config.audioRefName || "",
+                        audioRefText: config.audioRefText || "",
                         reasoningEffort: config.reasoningEffort || "auto",
                         videoSeconds: config.videoSeconds || "6",
                         vquality: config.vquality || "720",

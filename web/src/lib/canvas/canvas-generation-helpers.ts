@@ -120,6 +120,12 @@ export function buildGenerationConfig(config: AiConfig, node: CanvasNodeData | u
         audioFormat: node?.metadata?.audioFormat || config.audioFormat || defaultConfig.audioFormat,
         audioSpeed: node?.metadata?.audioSpeed || config.audioSpeed || defaultConfig.audioSpeed,
         audioInstructions: node?.metadata?.audioInstructions || config.audioInstructions || defaultConfig.audioInstructions,
+        audioProvider: node?.metadata?.audioProvider || config.audioProvider || defaultConfig.audioProvider,
+        audioTtsMode: node?.metadata?.audioTtsMode || config.audioTtsMode || defaultConfig.audioTtsMode,
+        audioLanguage: node?.metadata?.audioLanguage || config.audioLanguage || defaultConfig.audioLanguage,
+        audioRefId: node?.metadata?.audioRefId || config.audioRefId || defaultConfig.audioRefId,
+        audioRefName: node?.metadata?.audioRefName || config.audioRefName || defaultConfig.audioRefName,
+        audioRefText: node?.metadata?.audioRefText || config.audioRefText || defaultConfig.audioRefText,
         count: String(node?.metadata?.count || (mode === "image" ? config.canvasImageCount || config.count : config.count) || defaultConfig.count),
     };
 }

@@ -72,6 +72,12 @@ export type CanvasNodeMetadata = {
     audioFormat?: string;
     audioSpeed?: string;
     audioInstructions?: string;
+    audioProvider?: string;
+    audioTtsMode?: string;
+    audioLanguage?: string;
+    audioRefId?: string;
+    audioRefName?: string;
+    audioRefText?: string;
     references?: string[];
     naturalWidth?: number;
     naturalHeight?: number;

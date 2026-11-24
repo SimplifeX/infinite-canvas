@@ -2611,7 +2611,13 @@ function InfiniteCanvasPage() {
                     if (!reuseAudioNode) setConnections((prev) => [...prev, { id: nanoid(), fromNodeId: nodeId, toNodeId: audioId }]);
                     const controller = startGenerationRequest(audioId, nodeId, nodeId, runController);
                     try {
-                        const audio = await storeGeneratedAudio(await requestAudioGeneration(generationConfig, effectivePrompt, { signal: controller.signal }), generationConfig.audioFormat);
+                        const audio = await storeGeneratedAudio(
+                            await requestAudioGeneration(generationConfig, effectivePrompt, {
+                                signal: controller.signal,
+                                referenceAudio: generationContext.referenceAudios?.[0],
+                            }),
+                            generationConfig.audioFormat,
+                        );
                         setNodes((prev) => prev.map((node) => (node.id === audioId ? { ...node, metadata: { ...node.metadata, ...audioMetadata(audio), prompt: effectivePrompt, ...buildAudioGenerationMetadata(generationConfig) } } : node)));
                     } finally {
                         finishGenerationRequest(audioId, controller);
@@ -2836,11 +2842,18 @@ function InfiniteCanvasPage() {
                         generateAudio: generationConfig.videoGenerateAudio,
                         watermark: generationConfig.videoWatermark,
                         videoMode: generationConfig.videoMode,
+                        videoPreset: generationConfig.videoPreset,
                     }, context?.referenceVideos || [], context?.referenceAudios || []);
                     return;
                 }
                 if (node.type === CanvasNodeType.Audio) {
-                    const audio = await storeGeneratedAudio(await requestAudioGeneration(generationConfig, prompt, { signal: controller.signal }), generationConfig.audioFormat);
+                    const audio = await storeGeneratedAudio(
+                        await requestAudioGeneration(generationConfig, prompt, {
+                            signal: controller.signal,
+                            referenceAudio: context?.referenceAudios?.[0],
+                        }),
+                        generationConfig.audioFormat,
+                    );
                     setNodes((prev) => prev.map((item) => (item.id === node.id ? { ...item, metadata: { ...item.metadata, ...audioMetadata(audio), prompt, ...buildAudioGenerationMetadata(generationConfig) } } : item)));
                     return;
                 }

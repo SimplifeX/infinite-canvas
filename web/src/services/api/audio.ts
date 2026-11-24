@@ -1,12 +1,24 @@
 import axios from "axios";
 
 import i18n from "@/i18n";
-import { audioMimeType, normalizeAudioFormatValue, normalizeAudioSpeedValue, normalizeAudioVoiceValue } from "@/lib/audio-generation";
+import {
+    audioMimeType,
+    isQwenDesignMode,
+    normalizeAudioFormatValue,
+    normalizeAudioProviderValue,
+    normalizeAudioSpeedValue,
+    normalizeAudioTtsModeValue,
+    normalizeAudioVoiceValue,
+    normalizeQwenVoiceValue,
+    qwenTtsModelForMode,
+} from "@/lib/audio-generation";
+import { getCachedRefAudio, resolveNodeRefAudio } from "@/lib/qwen-tts-ref-audio";
 import { uploadMediaFile, type UploadedFile } from "@/services/file-storage";
 import { buildApiUrl, resolveModelRequestConfig, resolveModelScript, withLocalProxy, type AiConfig } from "@/stores/use-config-store";
+import type { ReferenceAudio } from "@/types/media";
 import { runModelPlugin } from "./model-plugin";
 
-type RequestOptions = { signal?: AbortSignal };
+type RequestOptions = { signal?: AbortSignal; referenceAudio?: ReferenceAudio };
 const apiText = (key: string, options?: Record<string, unknown>) => i18n.t(`apiErrors.${key}`, options);
 
 function aiApiUrl(config: AiConfig, path: string) {
@@ -20,7 +32,71 @@ function aiHeaders(config: AiConfig) {
     };
 }
 
+async function requestQwenTtsAudio(config: AiConfig, prompt: string, options?: RequestOptions): Promise<Blob> {
+    const requestConfig = resolveModelRequestConfig(config, config.audioModel || config.model);
+    if (!requestConfig.baseUrl.trim()) throw new Error(apiText("baseUrlRequired"));
+    const mode = normalizeAudioTtsModeValue(config.audioTtsMode);
+    const text = (prompt || "").trim();
+    if (!text) throw new Error(apiText("audioPromptRequired"));
+    const instructions = (config.audioInstructions || "").trim();
+    if (isQwenDesignMode(mode) && !instructions) throw new Error(apiText("qwenDesignRequired"));
+
+    let refAudioDataUrl: string | undefined;
+    if (mode === "base") {
+        if (options?.referenceAudio) {
+            refAudioDataUrl = (await resolveNodeRefAudio(options.referenceAudio, { signal: options?.signal })).dataUrl;
+        } else {
+            refAudioDataUrl = getCachedRefAudio(config.audioRefId)?.dataUrl;
+        }
+        if (!refAudioDataUrl) throw new Error(apiText("qwenRefAudioExpired"));
+    }
+
+    const format = normalizeAudioFormatValue(config.audioFormat || "mp3");
+    const payload: Record<string, unknown> = {
+        model: qwenTtsModelForMode(mode),
+        input: text,
+        response_format: format,
+        speed: Number(normalizeAudioSpeedValue(config.audioSpeed || "1")),
+    };
+    if (mode === "custom") {
+        payload.voice = normalizeQwenVoiceValue(config.audioVoice);
+        if (instructions) payload.instructions = instructions;
+    } else if (mode === "design") {
+        payload.instructions = instructions;
+    } else {
+        payload.ref_audio = refAudioDataUrl;
+        const refText = (config.audioRefText || "").trim();
+        if (refText) payload.ref_text = refText;
+    }
+    const language = (config.audioLanguage || "auto").trim();
+    if (language && language !== "auto") {
+        payload.language = language;
+    }
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (requestConfig.apiKey.trim()) headers.Authorization = `Bearer ${requestConfig.apiKey}`;
+
+    try {
+        const response = await axios.post<Blob>(withLocalProxy(aiApiUrl(requestConfig, "/audio/speech")), payload, {
+            headers,
+            responseType: "blob",
+            signal: options?.signal,
+        });
+        await assertAudioBlob(response.data);
+        const fallback = response.headers?.["x-tts-fallback"] || response.headers?.["X-TTS-Fallback"];
+        if (typeof fallback === "string" && fallback.trim()) {
+            console.warn(`[qwen3-tts] 服务端降级：${fallback.trim()}`);
+        }
+        return response.data.type.startsWith("audio/") ? response.data : new Blob([response.data], { type: audioMimeType(format) });
+    } catch (error) {
+        throw new Error(readAxiosError(error, apiText("audioGenerationFailed")));
+    }
+}
+
 export async function requestAudioGeneration(config: AiConfig, prompt: string, options?: RequestOptions): Promise<Blob> {
+    if (normalizeAudioProviderValue(config.audioProvider) === "qwen3tts") {
+        return requestQwenTtsAudio(config, prompt, options);
+    }
     const requestConfig = resolveModelRequestConfig(config, config.model || config.audioModel);
     const model = requestConfig.model.trim();
     const format = normalizeAudioFormatValue(config.audioFormat);
